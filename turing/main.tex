@@ -1,50 +1,4 @@
-\documentclass[a4paper,12pt]{article}
-\usepackage[utf8x]{inputenc}
-\usepackage[T1,T2A]{fontenc}
-\usepackage[russian]{babel}
-\usepackage{titlesec}
-\titlelabel{\thetitle. }
-
-\usepackage[dotinlabels]{titletoc}
-\usepackage[left=2cm,right=2cm, top=2cm,bottom=2cm,bindingoffset=0cm]{geometry}
-\usepackage{amsmath}
-\usepackage{enumitem}
-
-%% Images
-\usepackage{graphicx}
-\graphicspath{{images/}}
-
-%% Custom page style
-\usepackage{fancyhdr}
-\renewcommand{\sectionmark}[1]{\markright{\thesection\ \#1}}
-\fancypagestyle{chapter}{
-    \setlength{\headheight}{14.49998pt}
-    \renewcommand{\headrulewidth}{0.4pt}
-    \renewcommand{\footrulewidth}{0.4pt}
-
-    \fancyhf{}
-    \fancyhead[RO]{\rightmark}
-    \fancyfoot[LE,RO]{\textcopyright wishyoudie}
-    \fancyfoot[C]{\thepage}
-}
-
-%% Other useful commands
-\renewcommand{\bf}{\textbf} % Shortcut
-\renewcommand{\it}{\textit} % Shortcut
-% \setlist{noitemsep} % No spacing between list items
-
-%% Внесение titlepage в учёт счётчика страниц
-\makeatletter
-\renewenvironment{titlepage} {
-    \thispagestyle{empty}
-    }
-        \makeatother
-
-
-%% Final touch
-\usepackage{subfiles}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{preamble}
 \begin{document}
     \input{titlepage}
     \newpage
@@ -128,7 +82,7 @@
         Дойдя до пробела, возвращаемся на один символ налево и переходим в $Q_4$ для удвоения степени.
         \item[$Q_{19}$] -- чистим степень, переходим к $Q_{20}$.
         \item[$Q_{20}$] -- чистим исходное число.
-        Встретив единицу завершаем работу программы, так как единицы остались только в ответе.
+        Встретив единицу, завершаем работу программы, так как единицы остались только в ответе.
     \end{itemize}
 
     \newpage
@@ -136,11 +90,11 @@
     \section{Работа программы}
 
     \begin{center}
-        \includegraphics[scale=0.8]{lab1_1}
-        \includegraphics[scale=0.8]{lab1_2}
-        \includegraphics[scale=0.8]{lab1_3}
-        \includegraphics[scale=0.8]{lab1_4}
-        \includegraphics[scale=0.8]{lab1_5}
-        \includegraphics[scale=0.8]{lab1_6}
+        \includegraphics[scale=0.5]{lab1_1}
+        \includegraphics[scale=0.5]{lab1_2}
+        \includegraphics[scale=0.5]{lab1_3}
+        \includegraphics[scale=0.5]{lab1_4}
+        \includegraphics[scale=0.5]{lab1_5}
+        \includegraphics[scale=0.5]{lab1_6}
     \end{center}
 \end{document}
