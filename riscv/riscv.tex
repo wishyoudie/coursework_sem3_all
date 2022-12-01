@@ -1,0 +1,122 @@
+\input{preamble}
+\begin{document}
+    \begin{titlepage}
+
+        \begin{center}
+
+            \large Санкт-Петербургский политехнический университет Петра Великого\\
+            \large Институт компьютерных наук и технологий \\
+            \large Кафедра компьютерных систем и программных технологий\\[6cm]
+
+            \huge Отчет по лабораторной работе №3\\[0.5cm]
+            \large по дисциплине <<Низкоуровневое программирование>>\\[0.1cm]
+            \large\textbf{Программирование RISC-V}\\[5cm]
+
+        \end{center}
+
+
+        \begin{flushright}
+            \begin{minipage}{0.25\textwidth}
+                \begin{flushleft}
+
+                    \large\textbf{Работу выполнил:}\\
+                    \large Ильин В.П.\\
+                    \large {Группа:} 35300901/10005\\
+
+                    \large \textbf{Преподаватель:}\\
+                    \large Коренев Д.А.
+
+                \end{flushleft}
+            \end{minipage}
+        \end{flushright}
+
+        \vfill
+
+        \begin{center}
+            \large Санкт-Петербург\\
+            \large \the\year
+        \end{center}
+
+    \end{titlepage}
+    \vfill
+    \newpage
+    \renewcommand\contentsname{\centerline{Содержание}}
+    \tableofcontents
+    \newpage
+    \pagestyle{fancy}
+    \setlength{\headheight}{14.5pt}
+    \renewcommand{\sectionmark}[1]{\markright{#1}}
+    \fancyhead[LO,RE]{Лабораторная работа №3}
+
+    \section{Техническое задание}
+
+    Написать программу поиска k-й порядковой статистики массива in-place при помощи системы команд RISC-V.
+
+    \section{Метод решения}
+
+    По определению, \textit{k-й порядковой статистикой} данного массива называется k-й элемент этого массива, если бы
+    он был отсортирован.
+    Будем искать ее по определению: отсортируем массив синтаксически простейшей сортировкой и возьмем элемент с индексом $(k - 1)$.
+
+    \section{Программа 1}
+    В первом варианте программы (файл \verb|first.s|) все вычисления происходят в одной функции.
+    В режиме отладки программы вызывается при помощи команды
+    \begin{verbatim}
+    jupiter -debug first.s
+    \end{verbatim}
+    \subsection{Реализация программы 1}
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{images/lab3_1}
+        \caption{Реализация программы 1}
+        \label{fig:code_1}
+    \end{figure}
+
+    \subsection{Работа программы 1}
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{images/lab3_2}
+        \caption{Работа программы 1}
+        \label{fig:debug_1}
+    \end{figure}
+
+    \section{Программа 2}
+    Во втором варианте программа реализована при помощи двух подпрограмм: в одной содержится функция \verb|main| (файл \verb|main.s|), вызывающая подпрограмму, подсчитывающую ответ (ее реализация представлена в файле \verb|find_order_statistic.s|).
+    Стартовая метка, на которой происходит вызов главной подпрограммы, находится в файле \verb|second.s|.
+    В режиме отладки программа вызывается при помощи команды:
+    \begin{verbatim}
+        jupiter -debug -start __start second.s main.s find_order_statistic.s
+    \end{verbatim}
+    \subsection{Реализация программы 2}
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.3\linewidth]{images/lab3_3_1}
+        \caption{Файл тестовой программы}
+        \label{fig:code_2}
+    \end{figure}
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{images/lab3_3_2}
+        \caption{Файл с основной подпрограммой}
+        \label{fig:code_3}
+    \end{figure}
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{images/lab3_3_3}
+        \caption{Файл с функциональной подпрограммой}
+        \label{fig:code_4}
+    \end{figure}
+
+
+
+    \subsection{Работа программы 2}
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{images/lab3_4}
+        \caption{Работа программы 2}
+        \label{fig:debug_2}
+    \end{figure}
+
+\end{document}
