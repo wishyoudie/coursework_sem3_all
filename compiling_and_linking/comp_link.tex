@@ -1,0 +1,530 @@
+\input{preamble}
+%! suppress = LineBreak
+\begin{document}
+    \begin{titlepage}
+
+        \begin{center}
+
+            \large Санкт-Петербургский политехнический университет Петра Великого\\
+            \large Институт компьютерных наук и технологий \\
+            \large Кафедра компьютерных систем и программных технологий\\[6cm]
+
+            \huge Отчет по лабораторной работе №4\\[0.5cm]
+            \large по дисциплине <<Низкоуровневое программирование>>\\[0.1cm]
+            \large\textbf{Раздельная компиляция}\\[5cm]
+
+        \end{center}
+
+
+        \begin{flushright}
+            \begin{minipage}{0.25\textwidth}
+                \begin{flushleft}
+
+                    \large\textbf{Работу выполнил:}\\
+                    \large Ильин В.П.\\
+                    \large {Группа:} 35300901/10005\\
+
+                    \large \textbf{Преподаватель:}\\
+                    \large Коренев Д.А.
+
+                \end{flushleft}
+            \end{minipage}
+        \end{flushright}
+
+        \vfill
+
+        \begin{center}
+            \large Санкт-Петербург\\
+            \large \the\year
+        \end{center}
+
+    \end{titlepage}
+    \vfill
+    \newpage
+    \renewcommand\contentsname{\centerline{Содержание}}
+    \tableofcontents
+    \newpage
+    \pagestyle{fancy}
+    \setlength{\headheight}{14.5pt}
+    \renewcommand{\sectionmark}[1]{\markright{#1}}
+    \fancyhead[LO,RE]{Лабораторная работа №4}
+
+    \section{Техническое задание}\label{sec:task}
+    На языке C разработать функцию, реализующую задачу поиска $k$-й порядковой статистики массива.
+    Поместить определение функции в отдельный исходный файл, оформить заголовочный файл.
+    Разработать тестовую программу на языке C.
+
+    Собрать программу ``по шагам''.
+    Проанализировать выход препроцессора и компилятора.
+    Проанализировать состав и содержимое секций, таблицы символов, таблицы перемещений и отладочную информацию, содержащуюся в объектных файлах и исполняемом файле.
+
+    Выделить разработанную функцию в статическую библиотеку.
+    Разработать make-файлы для сборки библиотеки и использующей ее тестовой программы.
+    Проанализировать ход сборки библиотеки и программы, созданные файлы зависимостей.
+
+    \section{Разработанные исходные тексты}\label{sec:listings}
+    \lstinputlisting[style=cpp, label={lst:find.c}, caption=Определение функции]{listings/find.c}
+    \lstinputlisting[style=cpp, label={lst:main.c}, caption=Тестовая программа]{listings/main.c}
+    \lstinputlisting[style=cpp, label={lst:find.h}, caption=Заголовочный файл]{listings/find.h}
+    % \lstinputlisting[style=def, label={lst:makefile}, caption=Make-файл]{listings/Makefile}
+
+    \section{Сборка программы по шагам}\label{sec:stepbystep}
+    \subsection{Препроцессирование}\label{subsec:preprocessing}
+    Первым шагом является препроцессирование файлов исходного кода \verb|find.c| и \verb|main.c| в файлы \verb|find.i| и \verb|main.i| соответственно. Для этого выполним следующие команды:
+    \begin{Verbatim}[breaklines=true]
+riscv64-unknown-elf-gcc -march=rv32i -mabi=ilp32 -O1 -E find.c -o find.i
+riscv64-unknown-elf-gcc -march=rv32i -mabi=ilp32 -O1 -E main.c -o main.i
+    \end{Verbatim}
+    Драйвер компилятора запускается с командами \verb|-march=rv32i -mabi=ilp32|, указывающими, что целевым является процессор с базовой архитектурой системы команд \verb|RV32I|.
+    Опция \verb|-O1| указывает выполнять базовые оптимизации, а \verb|-E| — остановить процесс сборки после препроцессирования.
+    Ниже представлены фрагменты полученных файлов. В полной версии файла \verb|main.i| перечислены все определения из библиотеки \verb|<stdio.h>|.
+    \newpage
+
+    \lstinputlisting[style=def, label={lst:find.i}, caption=find.i]{listings/find.i}
+    \lstinputlisting[style=def, label={lst:main.i}, caption=main.i (фрагмент)]{listings/main.i}
+
+    \subsection{Компиляция}\label{subsec:compilation}
+
+    Далее необходимо выполнить компиляцию получившихся препроцессированных файлов, сохранив результат - сгенерированный код на языке ассемблера. Для этого воспользуемся командами:
+    \begin{Verbatim}[breaklines=true]
+riscv64-unknown-elf-gcc -march=rv32i -mabi=ilp32 -O1 -S -fpreprocessed find.i -o find.s
+riscv64-unknown-elf-gcc -march=rv32i -mabi=ilp32 -O1 -S -fpreprocessed main.i -o main.s
+    \end{Verbatim}
+    Для останова процесса сборки после компиляции используется опция \verb|-S|. Флаг \verb|-fpreprocessed| (для \textit{драйвера} компилятора его указывать необязательно) говорит драйверу компилятора о том, что переданный файл уже был препроцессирован, и повторять те же действия не стоит.
+
+    \lstinputlisting[style=riscv, label={lst:find.s}, caption=find.s]{listings/find.s}
+    \vspace{2cm}
+    \lstinputlisting[style=riscv, label={lst:main.s}, caption=main.s]{listings/main.s}
+
+    Прокомментируем содержимое полученных файлов. В \verb|find.s| определяется подпрограмма \verb|find_order_statistic|, выполняющая функциональность задачи.
+    В файле \verb|main.s| определяются две подпрограммы: \verb|test| и \verb|main|. Вместе они обеспечивают тестирование функциональной подпрограммы.
+    В \verb|main| создаются два тестовых набора данных и для каждого из них вызывается подпрограмма \verb|test|. В ней несколько раз вызывается библиотечная подпрограмма \verb|printf| для вывода текста на экран, а также тестируемая \verb|find_order_statistic|.
+    \subsection{Ассемблирование}\label{subsec:assembly}
+    Для ассемблирования выполним следующие команды:
+    \begin{Verbatim}[breaklines=true]
+riscv64-unknown-elf-gcc -march=rv32i -mabi=ilp32 -c find.s -o find.o
+riscv64-unknown-elf-gcc -march=rv32i -mabi=ilp32 -c main.s -o main.o
+    \end{Verbatim}
+    Опция \verb|-c| останавливает процесс сборки после ассемблирования. Стоит отметить, что в этих командах опция \verb|-O1| уже не используется, так как ассемблер (обычно) не выполняет оптимизацию.
+
+    \subsubsection{Анализ результата}\label{subsubsec:analysis}
+    Ненадолго прервем сборку и изучим полученные результаты. Для начала, рассмотрим содержимое таблиц символов полученных объектных файлов. Для этого воспользуемся другой утилитой:
+    \begin{Verbatim}[breaklines=true]
+riscv64-unknown-elf-objdump -t find.o main.o
+
+SYMBOL TABLE:
+00000000 l    df *ABS*  00000000 find.c
+00000000 l    d  .text  00000000 .text
+00000000 l    d  .data  00000000 .data
+00000000 l    d  .bss   00000000 .bss
+0000004c l       .text  00000000 .L2
+00000040 l       .text  00000000 .L3
+00000038 l       .text  00000000 .L7
+00000018 l       .text  00000000 .L4
+00000020 l       .text  00000000 .L5
+00000000 l    d  .comment       00000000 .comment
+00000000 l    d  .riscv.attributes      00000000 .riscv.attributes
+00000000 g     F .text  0000005c find_order_statistic
+
+
+
+main.o:     file format elf32-littleriscv
+
+SYMBOL TABLE:
+00000000 l    df *ABS*  00000000 main.c
+00000000 l    d  .text  00000000 .text
+00000000 l    d  .data  00000000 .data
+00000000 l    d  .bss   00000000 .bss
+00000000 l    d  .rodata        00000000 .rodata
+00000000 l       .rodata        00000000 .LANCHOR0
+00000000 l    d  .rodata.str1.4 00000000 .rodata.str1.4
+00000000 l       .rodata.str1.4 00000000 .LC2
+0000001c l       .rodata.str1.4 00000000 .LC3
+00000020 l       .rodata.str1.4 00000000 .LC4
+0000006c l       .text  00000000 .L2
+00000054 l       .text  00000000 .L3
+00000000 l    d  .comment       00000000 .comment
+00000000 l    d  .riscv.attributes      00000000 .riscv.attributes
+00000000 g     F .text  000000b8 test
+00000000         *UND*  00000000 printf
+00000000         *UND*  00000000 find_order_statistic
+000000b8 g     F .text  00000098 main
+    \end{Verbatim}
+    Из таблицы символов видно, что символы \verb|printf| и \verb|find_order_statistic| имеют тип \verb|*UND*|. Это означает, что они использовались в ассемблерном коде, из которого был получен данный объектный файл, но не были определены; ассемблер сделал вывод о том, что символы должны быть определены где-то еще, и таким образом это отразил.
+
+    Теперь проанализируем содержимое секций. Используем ту же утилиту с опциями \verb|-d|, позволяющей дизассемблировать содержимое файла и \verb|-M no-aliases|, требующей использовать в выводе только инструкции системы команд (но не псевдоинструкции):
+    \begin{Verbatim}[breaklines=true]
+riscv64-unknown-elf-objdump -d -M no-aliases -j .text find.o main.o
+
+find.o:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <find_order_statistic>:
+   0:   04058663                beq     a1,zero,4c <.L2>
+   4:   00259813                slli    a6,a1,0x2
+   8:   01050833                add     a6,a0,a6
+   c:   00000893                addi    a7,zero,0
+  10:   00100313                addi    t1,zero,1
+  14:   02c0006f                jal     zero,40 <.L3>
+
+00000018 <.L4>:
+  18:   00478793                addi    a5,a5,4
+  1c:   01078e63                beq     a5,a6,38 <.L7>
+
+00000020 <.L5>:
+  20:   0007a683                lw      a3,0(a5)
+  24:   ffc7a703                lw      a4,-4(a5)
+  28:   fee6f8e3                bgeu    a3,a4,18 <.L4>
+  2c:   fed7ae23                sw      a3,-4(a5)
+  30:   00e7a023                sw      a4,0(a5)
+  34:   fe5ff06f                jal     zero,18 <.L4>
+
+00000038 <.L7>:
+  38:   00188893                addi    a7,a7,1
+  3c:   01158863                beq     a1,a7,4c <.L2>
+
+00000040 <.L3>:
+  40:   00450793                addi    a5,a0,4
+  44:   fcb36ee3                bltu    t1,a1,20 <.L5>
+  48:   ff1ff06f                jal     zero,38 <.L7>
+
+0000004c <.L2>:
+  4c:   00261613                slli    a2,a2,0x2
+  50:   00c50533                add     a0,a0,a2
+  54:   ffc52503                lw      a0,-4(a0)
+  58:   00008067                jalr    zero,0(ra)
+
+main.o:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <test>:
+   0:   fe010113                addi    sp,sp,-32
+   4:   00112e23                sw      ra,28(sp)
+   8:   00812c23                sw      s0,24(sp)
+   c:   00912a23                sw      s1,20(sp)
+  10:   01212823                sw      s2,16(sp)
+  14:   01312623                sw      s3,12(sp)
+  18:   01412423                sw      s4,8(sp)
+  1c:   01512223                sw      s5,4(sp)
+  20:   00050a13                addi    s4,a0,0
+  24:   00058993                addi    s3,a1,0
+  28:   00060a93                addi    s5,a2,0
+  2c:   00060593                addi    a1,a2,0
+  30:   00000537                lui     a0,0x0
+  34:   00050513                addi    a0,a0,0 # 0 <test>
+  38:   00000097                auipc   ra,0x0
+  3c:   000080e7                jalr    ra,0(ra) # 38 <test+0x38>
+  40:   02098663                beq     s3,zero,6c <.L2>
+  44:   000a0413                addi    s0,s4,0
+  48:   00299493                slli    s1,s3,0x2
+  4c:   014484b3                add     s1,s1,s4
+  50:   00000937                lui     s2,0x0
+
+00000054 <.L3>:
+  54:   00042583                lw      a1,0(s0)
+  58:   00090513                addi    a0,s2,0 # 0 <test>
+  5c:   00000097                auipc   ra,0x0
+  60:   000080e7                jalr    ra,0(ra) # 5c <.L3+0x8>
+  64:   00440413                addi    s0,s0,4
+  68:   fe9416e3                bne     s0,s1,54 <.L3>
+
+0000006c <.L2>:
+  6c:   000a8613                addi    a2,s5,0
+  70:   00098593                addi    a1,s3,0
+  74:   000a0513                addi    a0,s4,0
+  78:   00000097                auipc   ra,0x0
+  7c:   000080e7                jalr    ra,0(ra) # 78 <.L2+0xc>
+  80:   00050593                addi    a1,a0,0
+  84:   00000537                lui     a0,0x0
+  88:   00050513                addi    a0,a0,0 # 0 <test>
+  8c:   00000097                auipc   ra,0x0
+  90:   000080e7                jalr    ra,0(ra) # 8c <.L2+0x20>
+  94:   01c12083                lw      ra,28(sp)
+  98:   01812403                lw      s0,24(sp)
+  9c:   01412483                lw      s1,20(sp)
+  a0:   01012903                lw      s2,16(sp)
+  a4:   00c12983                lw      s3,12(sp)
+  a8:   00812a03                lw      s4,8(sp)
+  ac:   00412a83                lw      s5,4(sp)
+  b0:   02010113                addi    sp,sp,32
+  b4:   00008067                jalr    zero,0(ra)
+
+000000b8 <main>:
+  b8:   fc010113                addi    sp,sp,-64
+  bc:   02112e23                sw      ra,60(sp)
+  c0:   000007b7                lui     a5,0x0
+  c4:   00078793                addi    a5,a5,0 # 0 <test>
+  c8:   0007a803                lw      a6,0(a5)
+  cc:   0047a503                lw      a0,4(a5)
+  d0:   0087a583                lw      a1,8(a5)
+  d4:   00c7a603                lw      a2,12(a5)
+  d8:   0107a683                lw      a3,16(a5)
+  dc:   0147a703                lw      a4,20(a5)
+  e0:   01012c23                sw      a6,24(sp)
+  e4:   00a12e23                sw      a0,28(sp)
+  e8:   02b12023                sw      a1,32(sp)
+  ec:   02c12223                sw      a2,36(sp)
+  f0:   02d12423                sw      a3,40(sp)
+  f4:   02e12623                sw      a4,44(sp)
+  f8:   0187a603                lw      a2,24(a5)
+  fc:   01c7a683                lw      a3,28(a5)
+ 100:   0207a703                lw      a4,32(a5)
+ 104:   0247a783                lw      a5,36(a5)
+ 108:   00c12423                sw      a2,8(sp)
+ 10c:   00d12623                sw      a3,12(sp)
+ 110:   00e12823                sw      a4,16(sp)
+ 114:   00f12a23                sw      a5,20(sp)
+ 118:   00300613                addi    a2,zero,3
+ 11c:   00600593                addi    a1,zero,6
+ 120:   01810513                addi    a0,sp,24
+ 124:   00000097                auipc   ra,0x0
+ 128:   000080e7                jalr    ra,0(ra) # 124 <main+0x6c>
+ 12c:   00100613                addi    a2,zero,1
+ 130:   00400593                addi    a1,zero,4
+ 134:   00810513                addi    a0,sp,8
+ 138:   00000097                auipc   ra,0x0
+ 13c:   000080e7                jalr    ra,0(ra) # 138 <main+0x80>
+ 140:   00000513                addi    a0,zero,0
+ 144:   03c12083                lw      ra,60(sp)
+ 148:   04010113                addi    sp,sp,64
+ 14c:   00008067                jalr    zero,0(ra)
+    \end{Verbatim}
+    \vspace{2cm}
+    Отсюда видно, что вызовы подпрограмм, например, первый вызов \verb|printf| внутри \verb|test|, из псевдоинструкции \verb|call printf| транслируется в:
+    \begin{Verbatim}[breaklines=true]
+ 38:   00000097                auipc   ra,0x0
+ 3c:   000080e7                jalr    ra,0(ra) # 38 <test+0x38>
+    \end{Verbatim}
+    Ассемблер не имел возможности корректно определить целевой адрес перехода, поэтому сформировал некорректные нулевые значения и передал задачу исправления этих инструкций компоновщику.
+
+    Далее рассмотрим таблицу перемещений. Она содержит информацию обо всех ``неоконченных'' инструкциях, которая передается компоновщику.
+    Выполним команду с опцией \verb|-r|, выводящую таблицу перемещений:
+    \begin{Verbatim}[breaklines=true]
+riscv64-unknown-elf-objdump -r find.o main.o
+
+RELOCATION RECORDS FOR [.text]:
+OFFSET   TYPE              VALUE
+00000000 R_RISCV_BRANCH    .L2
+00000014 R_RISCV_JAL       .L3
+0000001c R_RISCV_BRANCH    .L7
+00000028 R_RISCV_BRANCH    .L4
+00000034 R_RISCV_JAL       .L4
+0000003c R_RISCV_BRANCH    .L2
+00000044 R_RISCV_BRANCH    .L5
+00000048 R_RISCV_JAL       .L7
+
+
+
+main.o:     file format elf32-littleriscv
+
+RELOCATION RECORDS FOR [.text]:
+OFFSET   TYPE              VALUE
+00000030 R_RISCV_HI20      .LC2
+00000030 R_RISCV_RELAX     *ABS*
+00000034 R_RISCV_LO12_I    .LC2
+00000034 R_RISCV_RELAX     *ABS*
+00000038 R_RISCV_CALL      printf
+00000038 R_RISCV_RELAX     *ABS*
+00000050 R_RISCV_HI20      .LC3
+00000050 R_RISCV_RELAX     *ABS*
+00000058 R_RISCV_LO12_I    .LC3
+00000058 R_RISCV_RELAX     *ABS*
+0000005c R_RISCV_CALL      printf
+0000005c R_RISCV_RELAX     *ABS*
+00000078 R_RISCV_CALL      find_order_statistic
+00000078 R_RISCV_RELAX     *ABS*
+00000084 R_RISCV_HI20      .LC4
+00000084 R_RISCV_RELAX     *ABS*
+00000088 R_RISCV_LO12_I    .LC4
+00000088 R_RISCV_RELAX     *ABS*
+0000008c R_RISCV_CALL      printf
+0000008c R_RISCV_RELAX     *ABS*
+000000c0 R_RISCV_HI20      .LANCHOR0
+000000c0 R_RISCV_RELAX     *ABS*
+000000c4 R_RISCV_LO12_I    .LANCHOR0
+000000c4 R_RISCV_RELAX     *ABS*
+00000124 R_RISCV_CALL      test
+00000124 R_RISCV_RELAX     *ABS*
+00000138 R_RISCV_CALL      test
+00000138 R_RISCV_RELAX     *ABS*
+00000040 R_RISCV_BRANCH    .L2
+00000068 R_RISCV_BRANCH    .L3
+    \end{Verbatim}
+    Записи типа \verb|R_RISCV_RELAX| необходимы для оптимизации, а все остальные содержат информацию для выполнения необходимых замен.
+    Дело в том, что, если точки вызова подпрограммы и сама подпрограмма находятся друг от друга достаточно близко, то вместо использования пары инструкций \verb|auipc+jalr|, позволяющей выполнять переходы в любую точку программы, можно ограничиться использованием инструкции \verb|jal|, операнд которой занимает всего 20 бит.
+    \subsection{Компоновка}\label{subsec:linking}
+    Для компоновки используем следующую команду:
+    \begin{Verbatim}[breaklines=true]
+riscv64-unknown-elf-gcc -march=rv32i -mabi=ilp32 find.o main.o -o main.out
+    \end{Verbatim}
+    В ней нет опции \verb|-W1,--no-relax|, а значит оптимизация, рассмотренная ранее, будет выполнена. Заметим, что компонуются файлы \textit{совместно}, а не отдельно, как это было на предыдущих этапах.
+
+    Посмотрим на результат компоновки, выполнив следующую команду:
+    \begin{Verbatim}[breaklines=true]
+riscv64-unknown-elf-objdump -j .text -d -M no-aliases main.out >main.ds
+    \end{Verbatim}
+    В файле \verb|main.ds| интересны только некоторые фрагменты, описывающие разработанные функции:
+    \begin{Verbatim}[breaklines=true]
+00010144 <find_order_statistic>:
+   10144:	04058663          	beq	a1,zero,10190 <find_order_statistic+0x4c>
+   10148:	00259813          	slli	a6,a1,0x2
+   1014c:	01050833          	add	a6,a0,a6
+   10150:	00000893          	addi	a7,zero,0
+   10154:	00100313          	addi	t1,zero,1
+   10158:	02c0006f          	jal	zero,10184 <find_order_statistic+0x40>
+   1015c:	00478793          	addi	a5,a5,4
+   10160:	01078e63          	beq	a5,a6,1017c <find_order_statistic+0x38>
+   10164:	0007a683          	lw	a3,0(a5)
+   10168:	ffc7a703          	lw	a4,-4(a5)
+   1016c:	fee6f8e3          	bgeu	a3,a4,1015c <find_order_statistic+0x18>
+   10170:	fed7ae23          	sw	a3,-4(a5)
+   10174:	00e7a023          	sw	a4,0(a5)
+   10178:	fe5ff06f          	jal	zero,1015c <find_order_statistic+0x18>
+   1017c:	00188893          	addi	a7,a7,1
+   10180:	01158863          	beq	a1,a7,10190 <find_order_statistic+0x4c>
+   10184:	00450793          	addi	a5,a0,4
+   10188:	fcb36ee3          	bltu	t1,a1,10164 <find_order_statistic+0x20>
+   1018c:	ff1ff06f          	jal	zero,1017c <find_order_statistic+0x38>
+   10190:	00261613          	slli	a2,a2,0x2
+   10194:	00c50533          	add	a0,a0,a2
+   10198:	ffc52503          	lw	a0,-4(a0)
+   1019c:	00008067          	jalr	zero,0(ra)
+
+000101a0 <test>:
+   101a0:	fe010113          	addi	sp,sp,-32
+   101a4:	00112e23          	sw	ra,28(sp)
+   101a8:	00812c23          	sw	s0,24(sp)
+   101ac:	00912a23          	sw	s1,20(sp)
+   101b0:	01212823          	sw	s2,16(sp)
+   101b4:	01312623          	sw	s3,12(sp)
+   101b8:	01412423          	sw	s4,8(sp)
+   101bc:	01512223          	sw	s5,4(sp)
+   101c0:	00050a13          	addi	s4,a0,0
+   101c4:	00058993          	addi	s3,a1,0
+   101c8:	00060a93          	addi	s5,a2,0
+   101cc:	00060593          	addi	a1,a2,0
+   101d0:	00025537          	lui	a0,0x25
+   101d4:	a2050513          	addi	a0,a0,-1504 # 24a20 <__clzsi2+0x78>
+   101d8:	35c000ef          	jal	ra,10534 <printf>
+   101dc:	02098463          	beq	s3,zero,10204 <test+0x64>
+   101e0:	000a0413          	addi	s0,s4,0
+   101e4:	00299493          	slli	s1,s3,0x2
+   101e8:	014484b3          	add	s1,s1,s4
+   101ec:	00025937          	lui	s2,0x25
+   101f0:	00042583          	lw	a1,0(s0)
+   101f4:	a3c90513          	addi	a0,s2,-1476 # 24a3c <__clzsi2+0x94>
+   101f8:	33c000ef          	jal	ra,10534 <printf>
+   101fc:	00440413          	addi	s0,s0,4
+   10200:	fe9418e3          	bne	s0,s1,101f0 <test+0x50>
+   10204:	000a8613          	addi	a2,s5,0
+   10208:	00098593          	addi	a1,s3,0
+   1020c:	000a0513          	addi	a0,s4,0
+   10210:	f35ff0ef          	jal	ra,10144 <find_order_statistic>
+   10214:	00050593          	addi	a1,a0,0
+   10218:	00025537          	lui	a0,0x25
+   1021c:	a4050513          	addi	a0,a0,-1472 # 24a40 <__clzsi2+0x98>
+   10220:	314000ef          	jal	ra,10534 <printf>
+   10224:	01c12083          	lw	ra,28(sp)
+   10228:	01812403          	lw	s0,24(sp)
+   1022c:	01412483          	lw	s1,20(sp)
+   10230:	01012903          	lw	s2,16(sp)
+   10234:	00c12983          	lw	s3,12(sp)
+   10238:	00812a03          	lw	s4,8(sp)
+   1023c:	00412a83          	lw	s5,4(sp)
+   10240:	02010113          	addi	sp,sp,32
+   10244:	00008067          	jalr	zero,0(ra)
+
+00010248 <main>:
+   10248:	fc010113          	addi	sp,sp,-64
+   1024c:	02112e23          	sw	ra,60(sp)
+   10250:	000257b7          	lui	a5,0x25
+   10254:	9f878793          	addi	a5,a5,-1544 # 249f8 <__clzsi2+0x50>
+   10258:	0007a803          	lw	a6,0(a5)
+   1025c:	0047a503          	lw	a0,4(a5)
+   10260:	0087a583          	lw	a1,8(a5)
+   10264:	00c7a603          	lw	a2,12(a5)
+   10268:	0107a683          	lw	a3,16(a5)
+   1026c:	0147a703          	lw	a4,20(a5)
+   10270:	01012c23          	sw	a6,24(sp)
+   10274:	00a12e23          	sw	a0,28(sp)
+   10278:	02b12023          	sw	a1,32(sp)
+   1027c:	02c12223          	sw	a2,36(sp)
+   10280:	02d12423          	sw	a3,40(sp)
+   10284:	02e12623          	sw	a4,44(sp)
+   10288:	0187a603          	lw	a2,24(a5)
+   1028c:	01c7a683          	lw	a3,28(a5)
+   10290:	0207a703          	lw	a4,32(a5)
+   10294:	0247a783          	lw	a5,36(a5)
+   10298:	00c12423          	sw	a2,8(sp)
+   1029c:	00d12623          	sw	a3,12(sp)
+   102a0:	00e12823          	sw	a4,16(sp)
+   102a4:	00f12a23          	sw	a5,20(sp)
+   102a8:	00300613          	addi	a2,zero,3
+   102ac:	00600593          	addi	a1,zero,6
+   102b0:	01810513          	addi	a0,sp,24
+   102b4:	eedff0ef          	jal	ra,101a0 <test>
+   102b8:	00100613          	addi	a2,zero,1
+   102bc:	00400593          	addi	a1,zero,4
+   102c0:	00810513          	addi	a0,sp,8
+   102c4:	eddff0ef          	jal	ra,101a0 <test>
+   102c8:	00000513          	addi	a0,zero,0
+   102cc:	03c12083          	lw	ra,60(sp)
+   102d0:	04010113          	addi	sp,sp,64
+   102d4:	00008067          	jalr	zero,0(ra)
+    \end{Verbatim}
+    \vspace{2cm}
+    Во-первых, можно заметить, что пары \verb|auipc+jalr| были успешно оптимизированы до \verb|jal|, позволив сократить число инструкций. Во-вторых, в результирующих инструкциях теперь верные адреса.
+
+    \section{Создание статической библиотеки}\label{sec:lib}
+    В некоторых случаях, при большом количестве объектных файлов, удобно использовать так называемые статические библиотеки. По сути, это архивы объектных файлов, из которых компоновщик выбирает нужные.
+    В случае данной задачи это не столь необходимо, поскольку используется только 2 объектных файла, а в библиотеку и то имеет смысл поместить лишь один.
+    Несмотря на это, создадим статическую библиотеку.
+
+    Для этого, используем соответствующую утилиту, которой передадим сформированный ранее объектный файл:
+    \begin{Verbatim}[breaklines=true]
+riscv64-unknown-elf-ar -rsc libfind.a find.o
+    \end{Verbatim}
+    Результирующим файлом является \verb|libfind.a|, рассмотрим его содержимое:
+    \begin{Verbatim}[breaklines=true]
+R:\study\lowlevelprog\c>riscv64-unknown-elf-ar -t libfind.a
+find.o
+    \end{Verbatim}
+    Видим, что в ней действительно находится переданный файл. Теперь используем полученную библиотеку для сборки:
+    \begin{Verbatim}[breaklines=true]
+riscv64-unknown-elf-gcc -march=rv32i -mabi=ilp32 -O1 --save-temps main.c libfind.a -o mainwlib.out
+    \end{Verbatim}
+    Таблица символов полученного файла будет содержать запись о разработанной функции, а также множество символов из подключенной библиотеки \verb|<stdio.h>|:
+    \begin{Verbatim}[breaklines=true]
+    ...
+0001027c g     F .text	0000005c find_order_statistic
+    ...
+    \end{Verbatim}
+    \section{Разработка Make-файла}\label{sec:makedev}
+    Для упрощения процесса сборки проекта удобно использовать так называемые make-файлы. По сути, они содержат консольные команды, необходимые для сборки проекта.
+    Ниже представлен разработанный для данного проекта make-file, в котором создано две зависимости: для сборки проекта и удаления всех файлов, кроме исходных.
+    \lstinputlisting[style=def, label={lst:makefile}, caption=Make-файл]{listings/Makefile}
+    Для его использования достаточно вызвать утилиту \verb|mingw32-make| и передать ей имя make-файла.
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.7\linewidth]{images/lab4_1}
+        \caption{Использование make-файла}
+        \label{fig:makefileusage}
+    \end{figure}
+
+    \newpage
+    Вызывая в командной строке сформированный файл \verb|output.exe|, видим ожидаемый вывод:
+    \begin{Verbatim}[breaklines=true]
+R:\study\lowlevelprog\c>output.exe
+3-th order statistic of { 4 3 5 7 2 8 } is 4
+1-th order statistic of { 11 7 -4 0 } is 0
+    \end{Verbatim}
+    \section{Вывод}\label{sec:end}
+    В ходе выполнения лабораторной работы, была реализована программа поиска $k$-й порядковой статистики массива.
+    Программа была разделена на 3 файла: реализацию функциональной подпрограммы, тестовую подпрограмму, вызывающую функицональную, а также заголовочный файл.
+    Проект был собран `по шагам'', во время сборки были проанализированы промежуточные файлы.
+    Были разработаны и протестированы статическая библиотека, а также make-файл, упрощающие сборку программ.
+\end{document}
